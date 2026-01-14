@@ -119,8 +119,10 @@ export default function Home() {
     field: keyof DocumentoRow,
     value: string
   ) => {
+    // Aplicar trim a todos los valores (como TRIM en Google Sheets)
+    const trimmedValue = value.trim();
     const newRows = rows.map((row) =>
-      row.id === id ? { ...row, [field]: value } : row
+      row.id === id ? { ...row, [field]: trimmedValue } : row
     );
     setRows(newRows);
     saveData(newRows);
