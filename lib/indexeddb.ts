@@ -100,12 +100,8 @@ export function generateTxtContent(documentos: DocumentoRow[]): string {
   const lines: string[] = [];
 
   for (const doc of documentos) {
-    // Formato: (ruc proveedor 11)(importe 15)
-    const line = [
-      padRight(doc.rucProveedor, 11),         // RUC Proveedor: 11 chars
-      padLeft(doc.importe, 15),               // Importe: 15 chars (alineado derecha)
-    ].join("");
-
+    // Formato: ruc_proveedor|importe (separado por pipe)
+    const line = `${doc.rucProveedor}|${doc.importe}`;
     lines.push(line);
   }
 
