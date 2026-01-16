@@ -100,17 +100,10 @@ export function generateTxtContent(documentos: DocumentoRow[]): string {
   const lines: string[] = [];
 
   for (const doc of documentos) {
-    // Formato: (ruc cliente 11)(ruc proveedor 11)(TD 2)(nro documento 25)(fecha emision 10)(fecha venc 10)(fecha confirm 10)(importe 15)(mon 2)
+    // Formato: (ruc proveedor 11)(importe 15)
     const line = [
-      padRight(doc.rucCliente, 11),           // RUC Cliente: 11 chars
       padRight(doc.rucProveedor, 11),         // RUC Proveedor: 11 chars
-      padRight(doc.tipoDocumento, 2),         // TD: 2 chars
-      padRight(doc.nroDocumento, 25),         // Nro Documento: 25 chars
-      formatFecha(doc.fechaEmision),          // Fecha Emisión: 10 chars (DD/MM/YYYY)
-      formatFecha(doc.fechaVencimiento),      // Fecha Venc: 10 chars
-      formatFecha(doc.fechaConfirmacion),     // Fecha Confirm: 10 chars
       padLeft(doc.importe, 15),               // Importe: 15 chars (alineado derecha)
-      padRight(doc.moneda, 2),                // Mon: 2 chars
     ].join("");
 
     lines.push(line);
