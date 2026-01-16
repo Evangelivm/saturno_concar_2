@@ -97,25 +97,25 @@ function padLeft(str: string, length: number): string {
 }
 
 export function generateTxtContent(documentos: DocumentoRow[]): string {
-  // Agrupar por RUC de cliente y sumar importes
+  // Agrupar por RUC de proveedor y sumar importes
   const agrupados = new Map<string, number>();
 
   for (const doc of documentos) {
-    const rucCliente = doc.rucCliente;
+    const rucProveedor = doc.rucProveedor;
     const importe = parseFloat(doc.importe) || 0;
 
-    if (agrupados.has(rucCliente)) {
-      agrupados.set(rucCliente, agrupados.get(rucCliente)! + importe);
+    if (agrupados.has(rucProveedor)) {
+      agrupados.set(rucProveedor, agrupados.get(rucProveedor)! + importe);
     } else {
-      agrupados.set(rucCliente, importe);
+      agrupados.set(rucProveedor, importe);
     }
   }
 
   // Generar líneas del TXT
   const lines: string[] = [];
-  for (const [rucCliente, importeTotal] of agrupados) {
-    // Formato: ruc_cliente|importe_total (separado por pipe)
-    const line = `${rucCliente}|${importeTotal.toFixed(4)}`;
+  for (const [rucProveedor, importeTotal] of agrupados) {
+    // Formato: ruc_proveedor|importe_total (separado por pipe)
+    const line = `${rucProveedor}|${importeTotal.toFixed(4)}`;
     lines.push(line);
   }
 
