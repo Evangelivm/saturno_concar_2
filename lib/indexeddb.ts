@@ -115,7 +115,7 @@ export function generateTxtContent(documentos: DocumentoRow[]): string {
   const lines: string[] = [];
   for (const [rucProveedor, importeTotal] of agrupados) {
     // Formato: ruc_proveedor|importe_total (separado por pipe)
-    const line = `${rucProveedor}|${importeTotal.toFixed(4)}`;
+    const line = `${rucProveedor}|${importeTotal.toFixed(2)}`;
     lines.push(line);
   }
 
