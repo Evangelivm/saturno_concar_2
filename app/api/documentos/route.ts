@@ -14,8 +14,9 @@ function generarNombreArchivo(correlativo: number): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { documentos } = body as {
+    const { documentos, fechaCliente } = body as {
       documentos: DocumentoDB[];
+      fechaCliente?: string;
     };
 
     if (!documentos || !Array.isArray(documentos) || documentos.length === 0) {
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const resultado = await guardarDocumentosConCorrelativo(documentos);
+    const resultado = await guardarDocumentosConCorrelativo(documentos, fechaCliente);
     const nombreArchivo = generarNombreArchivo(resultado.correlativo);
 
     return NextResponse.json({

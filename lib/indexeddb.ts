@@ -149,6 +149,9 @@ export async function guardarYGenerarTxt(documentos: DocumentoRow[]): Promise<{
     mon: doc.moneda,
   }));
 
+  // Obtener fecha del cliente en formato YYYY-MM-DD
+  const fechaCliente = new Date().toISOString().split("T")[0];
+
   // Llamar a la API para guardar en BD y obtener correlativo
   const response = await fetch("/api/documentos", {
     method: "POST",
@@ -157,6 +160,7 @@ export async function guardarYGenerarTxt(documentos: DocumentoRow[]): Promise<{
     },
     body: JSON.stringify({
       documentos: documentosParaAPI,
+      fechaCliente: fechaCliente,
     }),
   });
 

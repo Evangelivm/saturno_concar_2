@@ -35,7 +35,8 @@ function generarNombreArchivo(correlativo: number): string {
 }
 
 export async function guardarDocumentosConCorrelativo(
-  documentos: DocumentoDB[]
+  documentos: DocumentoDB[],
+  fechaCliente?: string
 ): Promise<{ correlativo: number; nombreArchivo: string; success: boolean }> {
   const connection = await pool.getConnection();
 
@@ -44,8 +45,8 @@ export async function guardarDocumentosConCorrelativo(
     await connection.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
     await connection.beginTransaction();
 
-    // Obtener la fecha actual
-    const fechaHoy = new Date().toISOString().split("T")[0];
+    // Usar fecha del cliente o del servidor si no se proporciona
+    const fechaHoy = fechaCliente || new Date().toISOString().split("T")[0];
 
     // Obtener o crear el correlativo para hoy
     const [rows] = await connection.query<mysql.RowDataPacket[]>(
