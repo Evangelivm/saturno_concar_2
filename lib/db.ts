@@ -148,23 +148,44 @@ export interface TransaccionResult {
   created_at: string;
 }
 
-export async function obtenerDocumentos(limit: number = 100, offset: number = 0): Promise<{
+export async function obtenerDocumentos(
+  limit: number = 100,
+  offset: number = 0,
+  fechaDesde?: string,
+  fechaHasta?: string
+): Promise<{
   documentos: DocumentoDBResult[];
   total: number;
 }> {
   const connection = await pool.getConnection();
 
   try {
+    // Construir condiciones WHERE
+    let whereClause = "";
+    const params: any[] = [];
+
+    if (fechaDesde && fechaHasta) {
+      whereClause = "WHERE DATE(created_at) BETWEEN ? AND ?";
+      params.push(fechaDesde, fechaHasta);
+    } else if (fechaDesde) {
+      whereClause = "WHERE DATE(created_at) >= ?";
+      params.push(fechaDesde);
+    } else if (fechaHasta) {
+      whereClause = "WHERE DATE(created_at) <= ?";
+      params.push(fechaHasta);
+    }
+
     // Obtener total de registros
     const [countResult] = await connection.query<mysql.RowDataPacket[]>(
-      "SELECT COUNT(*) as total FROM documentos"
+      `SELECT COUNT(*) as total FROM documentos ${whereClause}`,
+      params
     );
     const total = countResult[0].total;
 
     // Obtener documentos con paginacion
     const [rows] = await connection.query<mysql.RowDataPacket[]>(
-      `SELECT * FROM documentos ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`,
-      [limit, offset]
+      `SELECT * FROM documentos ${whereClause} ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
     );
 
     return {

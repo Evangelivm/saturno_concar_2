@@ -49,8 +49,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "100");
     const offset = parseInt(searchParams.get("offset") || "0");
+    const fechaDesde = searchParams.get("fechaDesde") || undefined;
+    const fechaHasta = searchParams.get("fechaHasta") || undefined;
 
-    const resultado = await obtenerDocumentos(limit, offset);
+    const resultado = await obtenerDocumentos(limit, offset, fechaDesde, fechaHasta);
 
     return NextResponse.json({
       success: true,

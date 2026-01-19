@@ -8,6 +8,7 @@ import {
   guardarYGenerarTxt,
   downloadTxt,
 } from "@/lib/indexeddb";
+import * as XLSX from "xlsx";
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
@@ -67,6 +68,8 @@ export default function Home() {
   const [dbLoading, setDbLoading] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [dbPage, setDbPage] = useState(0);
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
   const dbLimit = 50;
 
   useEffect(() => {
@@ -80,11 +83,15 @@ export default function Home() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const fetchHistorial = useCallback(async (page: number = 0) => {
+  const fetchHistorial = useCallback(async (page: number = 0, desde?: string, hasta?: string) => {
     setDbLoading(true);
     setDbError(null);
     try {
-      const response = await fetch(`/api/documentos?limit=${dbLimit}&offset=${page * dbLimit}`);
+      let url = `/api/documentos?limit=${dbLimit}&offset=${page * dbLimit}`;
+      if (desde) url += `&fechaDesde=${desde}`;
+      if (hasta) url += `&fechaHasta=${hasta}`;
+
+      const response = await fetch(url);
       if (!response.ok) throw new Error("Error al cargar historial");
       const data = await response.json();
       setDbDocumentos(data.documentos);
@@ -98,9 +105,9 @@ export default function Home() {
 
   useEffect(() => {
     if (activeTab === "historial") {
-      fetchHistorial(dbPage);
+      fetchHistorial(dbPage, fechaDesde, fechaHasta);
     }
-  }, [activeTab, dbPage, fetchHistorial]);
+  }, [activeTab, dbPage, fechaDesde, fechaHasta, fetchHistorial]);
 
   const saveData = useCallback(async (newRows: DocumentoRow[]) => {
     setSaveStatus("saving");
@@ -156,7 +163,7 @@ export default function Home() {
 
       // Refrescar historial si estamos en esa pestaña
       if (activeTab === "historial") {
-        fetchHistorial(0);
+        fetchHistorial(0, fechaDesde, fechaHasta);
         setDbPage(0);
       }
     } catch (error) {
@@ -171,6 +178,42 @@ export default function Home() {
     const newRows = [createEmptyRow()];
     setRows(newRows);
     saveData(newRows);
+  };
+
+  const exportarExcel = () => {
+    if (dbDocumentos.length === 0) {
+      alert("No hay datos para exportar");
+      return;
+    }
+
+    // Preparar datos para Excel
+    const datosExcel = dbDocumentos.map((doc) => ({
+      Correlativo: doc.correlativo,
+      Archivo: doc.nombre_archivo,
+      "RUC Cliente": doc.ruc_cliente,
+      "RUC Proveedor": doc.ruc_proveedor,
+      "Tipo Doc": doc.tipo_documento,
+      "Nro Documento": doc.nro_documento,
+      "Cod Interno": doc.cod_interno_doc || "",
+      "F. Emisión": formatDateFromDB(doc.fecha_emision),
+      "F. Vencimiento": formatDateFromDB(doc.fecha_vencimiento),
+      "F. Confirmación": formatDateFromDB(doc.fecha_confirmacion),
+      Importe: doc.importe,
+      Moneda: doc.mon,
+      "Fecha Creación": formatDateFromDB(doc.created_at),
+    }));
+
+    // Crear libro de Excel
+    const ws = XLSX.utils.json_to_sheet(datosExcel);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Documentos");
+
+    // Generar nombre de archivo
+    const fechaActual = new Date().toISOString().split("T")[0];
+    const nombreArchivo = `documentos_${fechaActual}.xlsx`;
+
+    // Descargar archivo
+    XLSX.writeFile(wb, nombreArchivo);
   };
 
   if (isLoading) {
@@ -494,22 +537,82 @@ export default function Home() {
         {activeTab === "historial" && (
           <>
             {/* Action Bar */}
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                  {dbTotal} registros en base de datos
-                </span>
+            <div className="mb-4 flex flex-col gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                    {dbTotal} registros en base de datos
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setDbPage(0);
+                      fetchHistorial(0, fechaDesde, fechaHasta);
+                    }}
+                    disabled={dbLoading}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:opacity-50"
+                  >
+                    <svg className={`h-4 w-4 ${dbLoading ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refrescar
+                  </button>
+                  <button
+                    onClick={exportarExcel}
+                    disabled={dbLoading || dbDocumentos.length === 0}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Exportar Excel
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => fetchHistorial(dbPage)}
-                disabled={dbLoading}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:opacity-50"
-              >
-                <svg className={`h-4 w-4 ${dbLoading ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Refrescar
-              </button>
+
+              {/* Filtros de fecha */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-slate-700">Desde:</label>
+                  <input
+                    type="date"
+                    value={fechaDesde}
+                    onChange={(e) => {
+                      setFechaDesde(e.target.value);
+                      setDbPage(0);
+                    }}
+                    className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-slate-700">Hasta:</label>
+                  <input
+                    type="date"
+                    value={fechaHasta}
+                    onChange={(e) => {
+                      setFechaHasta(e.target.value);
+                      setDbPage(0);
+                    }}
+                    className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+                {(fechaDesde || fechaHasta) && (
+                  <button
+                    onClick={() => {
+                      setFechaDesde("");
+                      setFechaHasta("");
+                      setDbPage(0);
+                    }}
+                    className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Limpiar filtros
+                  </button>
+                )}
+              </div>
             </div>
 
             {dbError && (
